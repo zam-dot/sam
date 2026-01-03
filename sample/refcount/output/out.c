@@ -36,7 +36,7 @@ typedef char *string;
 string string_create(const char *literal) {
     if (!literal) return NULL;
     size_t len = strlen(literal);
-    char *str = rc_alloc(len + 1);
+    char  *str = rc_alloc(len + 1);
     if (str) strcpy(str, literal);
     return str;
 }
@@ -45,7 +45,7 @@ string string_concat(string a, string b) {
     if (!a || !b) return NULL;
     size_t len_a = strlen(a);
     size_t len_b = strlen(b);
-    char *result = rc_alloc(len_a + len_b + 1);
+    char  *result = rc_alloc(len_a + len_b + 1);
     if (result) {
         strcpy(result, a);
         strcpy(result + len_a, b);
@@ -67,7 +67,7 @@ string string_substr(string s, size_t start, size_t len) {
 }
 
 size_t string_length(string s) { return s ? strlen(s) : 0; }
-void string_free(string s) { rc_release(s); }
+void   string_free(string s) { rc_release(s); }
 
 // ========== USER CODE STARTS HERE ==========
 #include <stdio.h>
@@ -86,7 +86,8 @@ void test() {
     rc_release(s1);
     rc_release(s3);
     rc_release(s4);
-    rc_release(s5);}
+    rc_release(s5);
+}
 
 
 int main() {
