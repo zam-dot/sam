@@ -1,14 +1,15 @@
-// main.c - Transpiler with inline runtime and tcc --run support
+// main.c - Updated with proper file handling
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 
 // Function declarations
 void add_semicolons(FILE *in, FILE *out);
 void transform_strings(FILE *in, FILE *out);
 void add_refcounting(FILE *in, FILE *out);
-
+void add_arena_support(FILE *in, FILE *out);
 // Helper to ensure directory exists
 int ensure_dir(const char *path) {
     struct stat st = {0};
@@ -21,11 +22,63 @@ int ensure_dir(const char *path) {
     return 1;
 }
 
-// Inline runtime that gets embedded in output
+
+// Inline runtime (same as before, includes arena functions)
 static const char *inline_runtime =
     "#include <stdio.h>\n"
     "#include <stdlib.h>\n"
     "#include <string.h>\n"
+    "\n"
+    "// ========== ARENA ALLOCATOR ==========\n"
+    "typedef struct Arena Arena;\n"
+    "struct Arena {\n"
+    "    unsigned char *buffer;\n"
+    "    size_t offset;\n"
+    "    size_t capacity;\n"
+    "    int is_dynamic;\n"
+    "};\n"
+    "\n"
+    "Arena *arena_create(size_t capacity) {\n"
+    "    Arena *arena = malloc(sizeof(Arena));\n"
+    "    if (!arena) return NULL;\n"
+    "    arena->buffer = malloc(capacity);\n"
+    "    if (!arena->buffer) { free(arena); return NULL; }\n"
+    "    arena->offset = 0;\n"
+    "    arena->capacity = capacity;\n"
+    "    arena->is_dynamic = 1;\n"
+    "    return arena;\n"
+    "}\n"
+    "\n"
+    "void arena_destroy(Arena *arena) {\n"
+    "    if (!arena) return;\n"
+    "    if (arena->is_dynamic && arena->buffer) free(arena->buffer);\n"
+    "    free(arena);\n"
+    "}\n"
+    "\n"
+    "void arena_reset(Arena *arena) {\n"
+    "    if (arena) arena->offset = 0;\n"
+    "}\n"
+    "\n"
+    "void *arena_alloc(Arena *arena, size_t size) {\n"
+    "    if (!arena || size == 0) return NULL;\n"
+    "    size = (size + 7) & ~7; // Align to 8 bytes\n"
+    "    if (arena->offset + size > arena->capacity) {\n"
+    "        fprintf(stderr, \"Arena out of memory\\n\");\n"
+    "        return NULL;\n"
+    "    }\n"
+    "    void *ptr = arena->buffer + arena->offset;\n"
+    "    arena->offset += size;\n"
+    "    return ptr;\n"
+    "}\n"
+    "\n"
+    "void *arena_alloc_zero(Arena *arena, size_t size) {\n"
+    "    void *ptr = arena_alloc(arena, size);\n"
+    "    if (ptr) memset(ptr, 0, size);\n"
+    "    return ptr;\n"
+    "}\n"
+    "\n"
+    "#define arena_array(arena, type, count) ((type*)arena_alloc_zero(arena, sizeof(type) * "
+    "(count)))\n"
     "\n"
     "// ========== REFCOUNTING RUNTIME ==========\n"
     "typedef struct RCHeader {\n"
@@ -95,6 +148,7 @@ static const char *inline_runtime =
     "void string_free(string s) { rc_release(s); }\n"
     "\n"
     "// ========== USER CODE STARTS HERE ==========\n";
+
 
 int main(int argc, char **argv) {
     if (argc == 1) {
@@ -177,58 +231,59 @@ int main(int argc, char **argv) {
     FILE *temp1 = tmpfile();
     FILE *temp2 = tmpfile();
     FILE *temp3 = tmpfile();
+    FILE *temp4 = tmpfile();
 
-    int ch;
-
-    if (!temp1 || !temp2 || !temp3) {
+    if (!temp1 || !temp2 || !temp3 || !temp4) {
         fprintf(stderr, "Error: Cannot create temp files\n");
         fclose(in);
         fclose(out);
         if (temp1) fclose(temp1);
         if (temp2) fclose(temp2);
         if (temp3) fclose(temp3);
+        if (temp4) fclose(temp4);
         return 1;
     }
 
-    // Stage 1: String literal wrapping
+    int ch;
+
+    // 1. add_semicolons - FIRST to ensure all statements end properly
     rewind(in);
-    transform_strings(in, temp1);
+    add_semicolons(in, temp1);
 
-    // Stage 2: Semicolon addition (FIRST - refcounting needs semicolons)
+    // 2. transform_strings
     rewind(temp1);
-    add_semicolons(temp1, temp2);
+    transform_strings(temp1, temp2);
 
-    // Debug: Show what add_refcounting produced
+    // 3. add_arena_support - works on code with semicolons
     rewind(temp2);
-    while ((ch = fgetc(temp2)) != EOF)
-        putchar(ch);
-    rewind(temp2);
+    add_arena_support(temp2, temp3);
 
-    // Stage 3: Automatic refcounting (now works on complete statements)
-    rewind(temp2);
-    add_refcounting(temp2, temp3);
-
-    // Debug: Show what add_semicolons produced
+    // 4. add_refcounting
     rewind(temp3);
-    while ((ch = fgetc(temp3)) != EOF)
+    add_refcounting(temp3, temp4);
+
+    // Debug: Show what was produced
+    rewind(temp4);
+    while ((ch = fgetc(temp4)) != EOF)
         putchar(ch);
-    rewind(temp3);
+    rewind(temp4);
 
     // Write inline runtime to output
     fprintf(out, "%s", inline_runtime);
 
     // Copy transpiled user code
-    rewind(temp3);
-    while ((ch = fgetc(temp3)) != EOF) {
+    rewind(temp4);
+    while ((ch = fgetc(temp4)) != EOF) {
         fputc(ch, out);
     }
 
-    // Cleanup
+    // Cleanup - close ALL files
     fclose(in);
     fclose(out);
     fclose(temp1);
     fclose(temp2);
     fclose(temp3);
+    fclose(temp4);
 
     // If --run mode, execute with tcc
     if (run_with_tcc) {

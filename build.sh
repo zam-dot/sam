@@ -7,6 +7,7 @@ mkdir -p bin output
 # Build the transpiler to bin/main
 gcc -Wall -Wextra -std=c99 -Ilib \
     main.c \
+    lib/arena.c \
     lib/semicolon.c \
     lib/string_transform.c \
     lib/refcount.c \

@@ -1,20 +1,32 @@
-// src/main.sam - Test automatic refcounting
-#include <stdio.h>
-
-void test() {
-    // Create string
-    string a = "Hello"
+void arenaTest() {
+    Arena *__arena1 = arena_create(1048576)
+    int   *my_array = arena_array(__arena1, int, 5)
+    int    temp_my_array[] = {1, 2, 3, 4, 5}
+    for (int i = 0; i < 5; i++) {
+        my_array[i] = temp_my_array[i]
+    }
+    for (int i = 0; i < 5; i++) {
+        printf("%d ", my_array[i])
+    }
+    printf("\n");
     
-    // Copy string
-    string b = a
-    
-    printf("a: %s, b: %s\n", a, b)
-    
-    // Strings should be auto-freed here
+    arena_destroy(__arena1);  // Added HERE, not in main()
 }
 
 int main() {
-    test()
-    printf("Test completed\n")
-    return 0
+    Arena *__arena1 = arena_create(2048);  // Note: reset to __arena1 in this scope
+    float *floats = arena_array(__arena1, float, 3);
+    float  temp_floats[] = {1.0, 2.0, 3.0};
+    for (int i = 0; i < 3; i++) {
+        floats[i] = temp_floats[i];
+    }
+
+    for (int i = 0; i < 3; i++) {
+        printf("%.1f ", floats[i]);
+    }
+    arenaTest();
+    printf("\n");
+    
+    arena_destroy(__arena1);  // Only destroys main()'s arena
+    return 0;
 }
