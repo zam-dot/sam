@@ -1,0 +1,29 @@
+#include <stdio.h>
+
+void test() {
+    // Basic string
+    string s1 = "Hello"
+    
+    // Copy
+    string s2 = s1
+    
+    // New string
+    string s3 = "World"
+    
+    // Concatenation
+    string s4 = string_concat(s1, " ")
+    string s5 = string_concat(s4, s3)
+    
+    printf("s1: %s\n", s1)
+    printf("s2: %s\n", s2) 
+    printf("s3: %s\n", s3)
+    printf("s5: %s\n", s5)
+    
+    // All strings auto-freed here
+}
+
+int main() {
+    test()
+    printf("Memory should be clean!\n")
+    return 0
+}

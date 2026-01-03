@@ -1,0 +1,23 @@
+#include <stdio.h>
+
+void test() {
+    string s1 = "Hello"
+    
+    string s2 = s1
+    
+    string s3 = "World"
+    
+    string s4 = string_concat(s1, " ")
+    string s5 = string_concat(s4, s3)
+    
+    printf("s1: %s\n", s1)
+    printf("s2: %s\n", s2) 
+    printf("s3: %s\n", s3)
+    printf("s5: %s\n", s5)
+}
+
+int main() {
+    test()
+    printf("Memory should be clean!\n")
+    return 0
+}

@@ -1,0 +1,19 @@
+#include <stdio.h>
+
+
+void test() {
+    string s1 = string_create("Hello")
+    string s3 = string_create("World")
+    string s4 = string_concat(s1, " ")
+    string s5 = string_concat(s4, s3)
+    
+    printf("s1: %s\n", s1)
+    printf("s3: %s\n", s3)
+    printf("s5: %s\n", s5)
+}
+
+
+int main() {
+    test()
+    return 0
+}

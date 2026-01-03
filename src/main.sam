@@ -1,0 +1,20 @@
+// src/main.sam - Test automatic refcounting
+#include <stdio.h>
+
+void test() {
+    // Create string
+    string a = "Hello"
+    
+    // Copy string
+    string b = a
+    
+    printf("a: %s, b: %s\n", a, b)
+    
+    // Strings should be auto-freed here
+}
+
+int main() {
+    test()
+    printf("Test completed\n")
+    return 0
+}
