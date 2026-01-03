@@ -1,7 +1,6 @@
 // lib/string_transform.c - Complete with fixes
 #include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 typedef struct {
@@ -18,12 +17,12 @@ typedef struct {
     char identifier[256];
     int  ident_pos;
 
-    // NEW: Track string functions to prevent double-wrapping
+    // Track string functions to prevent double-wrapping
     int in_string_func;   // Inside string_create/string_concat/string_substr
     int func_paren_depth; // Parentheses depth in string function
     int skip_next_string; // Skip wrapping next string literal
 
-    // NEW: Track printf-like functions
+    // Track printf-like functions
     int  in_printf_func; // Inside printf/sprintf/fprintf
     char last_func[32];  // Last function name seen
 } TransformState;

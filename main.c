@@ -173,11 +173,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (!run_with_tcc) {
-        printf("Transpiling %s → %s\n", input_file, output_file);
-    }
-    printf("Pipeline: strings → refcounting → semicolons\n");
-
     // Create temporary files for each stage
     FILE *temp1 = tmpfile();
     FILE *temp2 = tmpfile();
@@ -205,7 +200,6 @@ int main(int argc, char **argv) {
 
     // Debug: Show what add_refcounting produced
     rewind(temp2);
-    printf("\n\n=== After add_refcounting ===\n");
     while ((ch = fgetc(temp2)) != EOF)
         putchar(ch);
     rewind(temp2);
@@ -216,7 +210,6 @@ int main(int argc, char **argv) {
 
     // Debug: Show what add_semicolons produced
     rewind(temp3);
-    printf("\n\n=== After add_semicolons ===\n");
     while ((ch = fgetc(temp3)) != EOF)
         putchar(ch);
     rewind(temp3);
@@ -239,23 +232,17 @@ int main(int argc, char **argv) {
 
     // If --run mode, execute with tcc
     if (run_with_tcc) {
-        printf("Running with tcc...\n");
-
         char cmd[1024];
         snprintf(cmd, sizeof(cmd), "tcc -run %s", output_file);
-
         int result = system(cmd);
 
         // Clean up temp file if we created one
         if (strcmp(output_file, "/tmp/sam_temp.c") == 0) {
             remove(output_file);
         }
-
         return result;
     }
 
     printf("Done! Created %s\n", output_file);
-    printf("To run: tcc -run %s\n", output_file);
-
     return 0;
 }

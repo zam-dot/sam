@@ -4,14 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ============================================================================
-// DATA STRUCTURES
-// ============================================================================
-
+// =========================== [ STRUCTS ] =========================================
 typedef struct {
     char name[256];
     int  scope_depth;
-    int  is_temporary; // For function return values
+    int  is_temporary;
 } RefcountedVar;
 
 typedef struct {
@@ -43,9 +40,7 @@ typedef struct {
     int  temp_count;
 } RefcountState;
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+// ============================== [ UTILITIES ] =======================================
 
 static void init_state(RefcountState *state) {
     memset(state, 0, sizeof(RefcountState));
@@ -68,9 +63,7 @@ static void flush_buffer(RefcountState *state, FILE *out) {
     }
 }
 
-// ============================================================================
-// VARIABLE MANAGEMENT
-// ============================================================================
+// =========================== [ VARIABLE MANAGEMENT ] ====================================
 
 static void add_var(RefcountState *state, const char *name, int is_temp) {
     // Resize if needed
@@ -102,9 +95,7 @@ static int is_string_function(const char *name) {
            strcmp(name, "string_substr") == 0;
 }
 
-// ============================================================================
-// MAIN TRANSFORMATION FUNCTION
-// ============================================================================
+// =========================== [ MAIN TRANSFORMATION ] ====================================
 
 void add_refcounting(FILE *in, FILE *out) {
     RefcountState state;
@@ -119,13 +110,8 @@ void add_refcounting(FILE *in, FILE *out) {
     // For tracking parentheses in function calls
     int paren_depth = 0;
 
-    // ========================================================================
     // MAIN PARSING LOOP
-    // ========================================================================
     while ((ch = fgetc(in)) != EOF) {
-        // --------------------------------------------------------------------
-        // TRACK COMMENTS AND STRINGS
-        // --------------------------------------------------------------------
         if (!in_line_comment && !in_block_comment && !in_char && ch == '"' && prev_ch != '\\') {
             in_string = !in_string;
         } else if (!in_string && !in_char && !in_block_comment && ch == '/' && prev_ch == '/') {
@@ -140,9 +126,7 @@ void add_refcounting(FILE *in, FILE *out) {
             in_block_comment = 0;
         }
 
-        // --------------------------------------------------------------------
         // SCOPE TRACKING
-        // --------------------------------------------------------------------
         if (!in_string && !in_char && !in_line_comment && !in_block_comment) {
             if (ch == '{') {
                 state.current_scope_depth++;
@@ -164,14 +148,11 @@ void add_refcounting(FILE *in, FILE *out) {
                     }
                 }
                 state.var_count = new_count;
-
                 state.current_scope_depth--;
             }
         }
 
-        // --------------------------------------------------------------------
         // IDENTIFIER PARSING
-        // --------------------------------------------------------------------
         if (!in_string && !in_char && !in_line_comment && !in_block_comment) {
             if (isalpha(ch) || ch == '_' || (ident_pos > 0 && isdigit(ch))) {
                 if (ident_pos < 255) {
@@ -220,12 +201,7 @@ void add_refcounting(FILE *in, FILE *out) {
                     paren_depth--;
                     if (paren_depth == 0) {
                         state.in_string_func_args = 0;
-
-                        // If we just finished a string function call in an assignment,
-                        // create a temporary variable for the result
                         if (state.in_assignment && strlen(state.last_string_func) > 0) {
-                            // String functions return refcounted strings (refcount = 1)
-                            // No need for extra retain
                             memset(state.src_var, 0, sizeof(state.src_var));
                         }
                     }
@@ -237,26 +213,18 @@ void add_refcounting(FILE *in, FILE *out) {
                 }
                 // Handle statement end
                 else if (ch == ';') {
-                    printf("DEBUG: Saw semicolon, in_assignment=%d, src_var='%s', dest_var='%s'\n",
-                           state.in_assignment, state.src_var, state.dest_var);
                     if (state.in_assignment) {
                         // Check if we need rc_retain
                         int need_retain = 0;
 
                         // Need retain if: dest = src (where src is a refcounted variable)
                         if (strlen(state.src_var) > 0) {
-                            printf("DEBUG: Checking if '%s' is known var...\n", state.src_var);
                             if (is_known_var(&state, state.src_var)) {
                                 need_retain = 1;
-                                printf("DEBUG: YES, adding rc_retain(%s)\n", state.src_var);
-                            } else {
-                                printf("DEBUG: NO, '%s' not known\n", state.src_var);
                             }
                         }
 
                         if (need_retain) {
-                            printf("DEBUG refcount: Adding rc_retain(%s) for assignment to %s\n",
-                                   state.src_var, state.dest_var);
                             buffer_char(&state, ch, out);
                             flush_buffer(&state, out);
                             fprintf(out, "\n    rc_retain(%s);", state.src_var);

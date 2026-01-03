@@ -31,16 +31,11 @@ void rc_retain(void *ptr) {
 }
 
 void rc_release(void *ptr) {
-    printf("DEBUG rc_release: ptr=%p\n", ptr);
     if (!ptr) return;
     RCHeader *header = RC_GET_HEADER(ptr);
-    printf("DEBUG: before: refcount=%zu, weak=%zu\n", header->refcount, header->weak_count);
 
     if (--header->refcount == 0 && header->weak_count == 0) {
-        printf("DEBUG: freeing header at %p\n", header);
         free(header);
-    } else {
-        printf("DEBUG: after: refcount=%zu, weak=%zu\n", header->refcount, header->weak_count);
     }
 }
 
@@ -115,5 +110,4 @@ string string_substr(string s, size_t start, size_t len) {
 }
 
 size_t string_length(string s) { return s ? strlen(s) : 0; }
-
-void string_free(string s) { rc_release(s); }
+void   string_free(string s) { rc_release(s); }

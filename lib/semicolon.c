@@ -24,7 +24,6 @@ static int starts_with(const char *str, const char *prefix) {
     return strncmp(str, prefix, strlen(prefix)) == 0;
 }
 
-
 void add_semicolons(FILE *in, FILE *out) {
     char line[1024];
 
@@ -39,7 +38,6 @@ void add_semicolons(FILE *in, FILE *out) {
         // Remove trailing whitespace
         rtrim(line);
         len = strlen(line);
-
         char *trimmed = ltrim(line);
 
         // Skip empty lines
